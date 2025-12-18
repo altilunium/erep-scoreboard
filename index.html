@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Performance - Dynamic Teams</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #1e2024;
+            --card-bg: #2a2d33;
+            --text-primary: #ffffff;
+            --text-secondary: #aeb2b7;
+            --border-color: #363940;
+            --badge-bg: #383b42; 
+            --accent: #0e9c68;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-container {
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+            background: var(--card-bg);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        textarea {
+            width: 100%;
+            height: 60px;
+            background: #15171a;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.8rem;
+        }
+
+        button {
+            margin-top: 8px;
+            padding: 6px 16px;
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .match-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .team-column {
+            display: flex;
+            flex-direction: column;
+            background: #24262b;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Team Header with Dynamic Name */
+        .team-summary {
+            background: #2d3035;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .team-label {
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
+        }
+
+        .final-score {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        /* Player Rows */
+        .player-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            border-bottom: 1px solid #2d3035;
+        }
+
+        .player-row:last-child { border-bottom: none; }
+
+        .player-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .flag {
+            font-family: 'Noto Color Emoji', sans-serif;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .player-name {
+            font-weight: 500;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .score-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: white;
+            background-color: var(--badge-bg);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .score-separator { opacity: 0.4; margin: 0 3px; }
+
+        @media (max-width: 600px) {
+            .match-grid { grid-template-columns: 1fr; gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="input-container">
+        <textarea id="pasteArea" placeholder="Paste Excel data starting from Header row..."></textarea>
+        <button id="genBtn">Generate UI</button>
+    </div>
+
+    <div id="displayArea" class="match-grid"></div>
+
+    <script type="module">
+        import { flag } from 'https://cdn.skypack.dev/country-emoji';
+
+        window.generateMatch = function() {
+            const input = document.getElementById('pasteArea').value;
+            const display = document.getElementById('displayArea');
+            display.innerHTML = ''; 
+
+            const lines = input.split('\n');
+            const teamA = [];
+            const teamB = [];
+            let teamAName = "Team 1";
+            let teamBName = "Team 2";
+
+            lines.forEach((line, index) => {
+                const cols = line.split('\t');
+                if (cols.length < 2) return;
+                
+                // Identify the Header Row (Row 2 in your image)
+                // We detect it if the word 'Score' appears in Column C (index 2)
+                if (cols[2] && cols[2].toLowerCase().trim() === 'score') {
+                    // Extract Team Names from Column B (index 1) and Column G (index 6)
+                    teamAName = cols[1].trim();
+                    teamBName = cols[6] ? cols[6].trim() : "Team 2";
+                    return; // Don't process header as a player
+                }
+
+                // Process Players (Team A: Cols 0-3 | Team B: Cols 5-8)
+                if (cols[0] && cols[1]) {
+                    teamA.push(processPlayerData(cols[0], cols[1], cols[2], cols[3]));
+                }
+                if (cols.length >= 7 && cols[5] && cols[6]) {
+                    teamB.push(processPlayerData(cols[5], cols[6], cols[7], cols[8]));
+                }
+            });
+
+            // Sorting by score descending
+            teamA.sort((a, b) => b.scoreVal - a.scoreVal);
+            teamB.sort((a, b) => b.scoreVal - a.scoreVal);
+
+            display.appendChild(createTeamColumn(teamAName, teamA));
+            display.appendChild(createTeamColumn(teamBName, teamB));
+        };
+
+        function processPlayerData(nat, name, scoreStr, capStr) {
+            let sStr = scoreStr ? scoreStr.toString().trim() : "0";
+            let val = parseFloat(sStr.replace(',', '.'));
+            let cStr = capStr ? capStr.toString().trim() : "0";
+            
+            return {
+                flag: flag(nat.trim()) || "🌐",
+                name: name.trim(),
+                scoreVal: isNaN(val) ? 0 : val,
+                displayStr: `${isNaN(val) ? "0.0" : val.toFixed(1)}<span class="score-separator">/</span>${isNaN(parseInt(cStr)) ? "0" : parseInt(cStr)}`
+            };
+        }
+
+        function createTeamColumn(teamTitle, players) {
+            const col = document.createElement('div');
+            col.className = 'team-column';
+
+            const totalScore = players.reduce((sum, p) => sum + p.scoreVal, 0).toFixed(1);
+
+            const summary = document.createElement('div');
+            summary.className = 'team-summary';
+            summary.innerHTML = `
+                <span class="team-label">${teamTitle}</span>
+                <span class="final-score">${totalScore}</span>
+            `;
+            col.appendChild(summary);
+
+            players.forEach(p => {
+                const row = document.createElement('div');
+                row.className = 'player-row';
+                row.innerHTML = `
+                    <div class="player-left">
+                        <span class="flag">${p.flag}</span>
+                        <span class="player-name">${p.name}</span>
+                    </div>
+                    <div class="score-badge">${p.displayStr}</div>
+                `;
+                col.appendChild(row);
+            });
+
+            return col;
+        }
+
+        document.getElementById('genBtn').addEventListener('click', window.generateMatch);
+    </script>
+</body>
+</html>
