@@ -9,3 +9,5 @@ Copy that table to the input form
 
 Done
 <img width="953" height="660" alt="image" src="https://github.com/user-attachments/assets/47f5f14a-2174-459b-97da-3fd143ee82ae" />
+
+https://www.erepublik.com/en/article/-highlight-indonesia-151-4-portugal-2792948
